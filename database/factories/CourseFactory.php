@@ -1,0 +1,28 @@
+<?php
+
+namespace Database\Factories;
+
+use App\Models\Course;
+use App\Models\Instructor;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends Factory<Course>
+ */
+class CourseFactory extends Factory
+{
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+            'instructor_id' => Instructor::factory(),
+            'code' => strtoupper(fake()->unique()->lexify('???')).fake()->numberBetween(1, 4),
+            'title' => fake()->sentence(3),
+            'units' => 3,
+        ];
+    }
+}
