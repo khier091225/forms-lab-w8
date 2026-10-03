@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\Instructor;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 
 class CourseController extends Controller
 {
@@ -38,6 +39,11 @@ class CourseController extends Controller
     public function store(StoreCourseRequest $request): RedirectResponse
     {
         $data = $request->validated();
+
+        if ($request->hasFile('image')) {
+            $data['image_path'] = $request->file('image')->store('courses', 'public');
+            abort_if($data['image_path'] === false, 500, 'The course image could not be saved.');
+        }
         unset($data['image']);
 
         $course = Course::create($data);
@@ -71,9 +77,19 @@ class CourseController extends Controller
     public function update(UpdateCourseRequest $request, Course $course): RedirectResponse
     {
         $data = $request->validated();
+        $oldImagePath = $course->image_path;
+
+        if ($request->hasFile('image')) {
+            $data['image_path'] = $request->file('image')->store('courses', 'public');
+            abort_if($data['image_path'] === false, 500, 'The course image could not be saved.');
+        }
         unset($data['image']);
 
         $course->update($data);
+
+        if ($request->hasFile('image') && $oldImagePath) {
+            Storage::disk('public')->delete($oldImagePath);
+        }
 
         return redirect()->route('courses.show', $course)
             ->with('status', 'Course updated.');
@@ -82,8 +98,14 @@ class CourseController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Course $course): void
+    public function destroy(Course $course): RedirectResponse
     {
-        //
+        if ($course->image_path) {
+            Storage::disk('public')->delete($course->image_path);
+        }
+
+        $course->delete();
+
+        return redirect()->route('courses.index')->with('status', 'Course deleted.');
     }
 }

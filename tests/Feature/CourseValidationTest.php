@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\Instructor;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
@@ -180,13 +181,15 @@ class CourseValidationTest extends TestCase
 
     public function test_created_course_with_valid_image_redirects_with_visible_flash_status(): void
     {
+        $disk = Storage::fake('public');
         $image = UploadedFile::fake()->image('course.png')->size(2048);
 
         $response = $this->post(route('courses.store'), $this->validData(['image' => $image]));
 
         $course = Course::sole();
         $response->assertRedirectToRoute('courses.show', $course);
-        $this->assertDatabaseHas('courses', ['id' => $course->id, 'code' => 'WEBDEV3', 'image_path' => null]);
+        $this->assertDatabaseHas('courses', ['id' => $course->id, 'code' => 'WEBDEV3', 'image_path' => $image->hashName('courses')]);
+        $disk->assertExists($image->hashName('courses'));
         $this->get(route('courses.show', $course))->assertSeeText('Course created.');
         $this->get(route('courses.show', $course))->assertDontSeeText('Course created.');
     }
@@ -195,6 +198,7 @@ class CourseValidationTest extends TestCase
     #[TestWith([true, 'The image field must not be greater than 2048 kilobytes.'])]
     public function test_invalid_image_is_rejected_without_saving(bool $oversized, string $message): void
     {
+        $disk = Storage::fake('public');
         $image = $oversized
             ? UploadedFile::fake()->image('large.png')->size(2049)
             : UploadedFile::fake()->create('document.txt', 1, 'text/plain');
@@ -203,17 +207,20 @@ class CourseValidationTest extends TestCase
 
         $response->assertRedirectToRoute('courses.create')->assertSessionHasErrors(['image' => $message]);
         $this->assertDatabaseCount('courses', 0);
+        $disk->assertDirectoryEmpty('/');
     }
 
-    public function test_valid_image_is_validated_without_changing_stored_image_path(): void
+    public function test_valid_image_is_accepted_at_the_size_limit(): void
     {
+        $disk = Storage::fake('public');
         $course = Course::factory()->create(['code' => 'WEBDEV3', 'image_path' => 'courses/existing.png']);
         $image = UploadedFile::fake()->image('course.png')->size(2048);
 
         $response = $this->put(route('courses.update', $course), $this->validData(['image' => $image]));
 
         $response->assertRedirectToRoute('courses.show', $course)->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('courses', ['id' => $course->id, 'image_path' => 'courses/existing.png']);
+        $this->assertDatabaseHas('courses', ['id' => $course->id, 'image_path' => $image->hashName('courses')]);
+        $disk->assertExists($image->hashName('courses'));
     }
 
     /**
