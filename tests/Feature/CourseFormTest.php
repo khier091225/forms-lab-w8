@@ -34,6 +34,9 @@ class CourseFormTest extends TestCase
         $this->assertSame(true, $form->evaluate('boolean(//input[@type="checkbox"]/@checked)'));
         $this->assertSame('0', $form->evaluate('string(//input[@type="hidden" and @name="is_active"]/@value)'));
         $this->assertSame('file', $form->evaluate('string(//input[@name="image"]/@type)'));
+        $this->assertSame('image/*', $form->evaluate('string(//input[@name="image"]/@accept)'));
+        $this->assertSame(false, $form->evaluate('boolean(//input[@name="image"]/@value)'));
+        $this->assertSame('3', $form->evaluate('string(//textarea[@name="description"]/@rows)'));
     }
 
     public function test_edit_form_displays_saved_values_and_current_image(): void
@@ -99,6 +102,30 @@ class CourseFormTest extends TestCase
         $this->assertSame('2', $form->evaluate('string(//input[@name="units"]/@value)'));
         $this->assertSame((string) $instructor->id, $form->evaluate('string(//select/option[@selected]/@value)'));
         $this->assertSame(false, $form->evaluate('boolean(//input[@type="checkbox"]/@checked)'));
+    }
+
+    public function test_every_field_displays_its_error_and_malformed_old_values_do_not_break_the_form(): void
+    {
+        $messages = [
+            'code' => ['The code field must be a string.'],
+            'title' => ['The title field is required.'],
+            'description' => ['The description field must be a string.'],
+            'units' => ['Units must be between 1 and 6.'],
+            'instructor_id' => ['The selected instructor is invalid.'],
+            'is_active' => ['The is active field must be true or false.'],
+            'image' => ['The image field must be an image.'],
+        ];
+        $this->withSession([
+            '_old_input' => ['code' => ['invalid'], 'description' => ['invalid']],
+            'errors' => ['default' => ['messages' => $messages, 'format' => ':message']],
+        ]);
+
+        $response = $this->get(route('courses.create'));
+
+        $response->assertSeeText('Please fix the 7 error(s) below.');
+        foreach ($messages as $fieldMessages) {
+            $response->assertSeeText($fieldMessages[0]);
+        }
     }
 
     private function formXPath(TestResponse $response): DOMXPath
