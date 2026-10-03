@@ -1,32 +1,21 @@
-<label for="code">Code</label>
-<input id="code" name="code" value="{{ old('code', $course->code) }}">
-@error('code') <p class="error">{{ $message }}</p> @enderror
+@if ($errors->any())
+    <div class="error-summary">
+        <strong>Please fix the {{ $errors->count() }} error(s) below.</strong>
+    </div>
+@endif
 
-<label for="title">Title</label>
-<input id="title" name="title" value="{{ old('title', $course->title) }}">
-@error('title') <p class="error">{{ $message }}</p> @enderror
+<x-forms.input name="code" label="Code" :value="$course->code" />
+<x-forms.input name="title" label="Title" :value="$course->title" />
 
 <label for="description">Description</label>
 <textarea id="description" name="description" rows="3"
     >{{ old('description', $course->description) }}</textarea>
 @error('description') <p class="error">{{ $message }}</p> @enderror
 
-<label for="units">Units</label>
-<input id="units" name="units" type="number"
-    value="{{ old('units', $course->units ?? 3) }}">
-@error('units') <p class="error">{{ $message }}</p> @enderror
+<x-forms.input name="units" label="Units" type="number" :value="$course->units ?? 3" />
 
-<label for="instructor_id">Instructor</label>
-<select id="instructor_id" name="instructor_id">
-    <option value="">— none —</option>
-    @foreach ($instructors as $instructor)
-        <option value="{{ $instructor->id }}"
-            @selected(old('instructor_id', $course->instructor_id) == $instructor->id)>
-            {{ $instructor->name }}
-        </option>
-    @endforeach
-</select>
-@error('instructor_id') <p class="error">{{ $message }}</p> @enderror
+<x-forms.select name="instructor_id" label="Instructor"
+    :options="$instructors->pluck('name', 'id')" :selected="$course->instructor_id" />
 
 <input type="hidden" name="is_active" value="0">
 <label>
@@ -39,6 +28,4 @@
     <img src="{{ asset('storage/' . $course->image_path) }}"
          alt="Current image" width="120">
 @endif
-<label for="image">Image</label>
-<input id="image" name="image" type="file" accept="image/*">
-@error('image') <p class="error">{{ $message }}</p> @enderror
+<x-forms.input name="image" label="Image" type="file" accept="image/*" />

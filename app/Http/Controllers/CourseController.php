@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCourseRequest;
+use App\Http\Requests\UpdateCourseRequest;
 use App\Models\Course;
 use App\Models\Instructor;
 use Illuminate\Contracts\View\View;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 
 class CourseController extends Controller
 {
@@ -33,9 +35,15 @@ class CourseController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request): void
+    public function store(StoreCourseRequest $request): RedirectResponse
     {
-        //
+        $data = $request->validated();
+        unset($data['image']);
+
+        $course = Course::create($data);
+
+        return redirect()->route('courses.show', $course)
+            ->with('status', 'Course created.');
     }
 
     /**
@@ -60,9 +68,15 @@ class CourseController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Course $course): void
+    public function update(UpdateCourseRequest $request, Course $course): RedirectResponse
     {
-        //
+        $data = $request->validated();
+        unset($data['image']);
+
+        $course->update($data);
+
+        return redirect()->route('courses.show', $course)
+            ->with('status', 'Course updated.');
     }
 
     /**
